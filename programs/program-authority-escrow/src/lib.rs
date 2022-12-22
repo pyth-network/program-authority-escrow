@@ -3,6 +3,9 @@ use anchor_lang::solana_program::bpf_loader_upgradeable;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::program::invoke;
 
+#[cfg(test)]
+mod tests;
+
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
