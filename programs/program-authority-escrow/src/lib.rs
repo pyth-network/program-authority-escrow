@@ -15,7 +15,7 @@ use anchor_lang::{
 #[cfg(test)]
 mod tests;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("escMHe7kSqPcDHx4HU44rAHhgdTLBZkUrU39aN8kMcL");
 
 #[program]
 pub mod program_authority_escrow {
