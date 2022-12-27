@@ -8,58 +8,107 @@ use {
 
 #[tokio::test]
 async fn test() {
-    let new_authority_keypair = Keypair::new();
-    let (mut simulator, current_authority_keypair) = EscrowSimulator::new().await;
+    let (mut simulator, authority_keypair_1) = EscrowSimulator::new().await;
+    let authority_keypair_2 = Keypair::new();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(current_authority_keypair.pubkey())
+        Some(authority_keypair_1.pubkey())
     );
     simulator
-        .propose(&current_authority_keypair, &new_authority_keypair.pubkey())
+        .propose(&authority_keypair_1, &authority_keypair_2.pubkey())
         .await
         .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(simulator.get_escrow_authority(
-            &current_authority_keypair.pubkey(),
-            &new_authority_keypair.pubkey()
-        ))
+        Some(
+            simulator
+                .get_escrow_authority(&authority_keypair_1.pubkey(), &authority_keypair_2.pubkey())
+        )
     );
     simulator
-        .revert(&current_authority_keypair, &new_authority_keypair.pubkey())
+        .revert(&authority_keypair_1, &authority_keypair_2.pubkey())
         .await
         .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(current_authority_keypair.pubkey())
+        Some(authority_keypair_1.pubkey())
     );
     simulator
-        .propose(&current_authority_keypair, &new_authority_keypair.pubkey())
+        .propose(&authority_keypair_1, &authority_keypair_2.pubkey())
         .await
         .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(simulator.get_escrow_authority(
-            &current_authority_keypair.pubkey(),
-            &new_authority_keypair.pubkey()
-        ))
+        Some(
+            simulator
+                .get_escrow_authority(&authority_keypair_1.pubkey(), &authority_keypair_2.pubkey())
+        )
     );
     simulator
-        .accept(&current_authority_keypair.pubkey(), &new_authority_keypair)
+        .accept(&authority_keypair_1.pubkey(), &authority_keypair_2)
         .await
         .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(new_authority_keypair.pubkey())
+        Some(authority_keypair_2.pubkey())
+    );
+
+    simulator
+        .propose(&authority_keypair_2, &authority_keypair_1.pubkey())
+        .await
+        .unwrap();
+    let program_data = simulator.get_program_data().await;
+    assert_eq!(
+        program_data.upgrade_authority_address,
+        Some(
+            simulator
+                .get_escrow_authority(&authority_keypair_2.pubkey(), &authority_keypair_1.pubkey())
+        )
+    );
+
+    simulator
+        .revert(&authority_keypair_2, &authority_keypair_1.pubkey())
+        .await
+        .unwrap();
+
+    let program_data = simulator.get_program_data().await;
+    assert_eq!(
+        program_data.upgrade_authority_address,
+        Some(authority_keypair_2.pubkey())
+    );
+
+    simulator
+        .propose(&authority_keypair_2, &authority_keypair_1.pubkey())
+        .await
+        .unwrap();
+    let program_data = simulator.get_program_data().await;
+    assert_eq!(
+        program_data.upgrade_authority_address,
+        Some(
+            simulator
+                .get_escrow_authority(&authority_keypair_2.pubkey(), &authority_keypair_1.pubkey())
+        )
+    );
+
+
+    simulator
+        .accept(&authority_keypair_2.pubkey(), &authority_keypair_1)
+        .await
+        .unwrap();
+
+    let program_data = simulator.get_program_data().await;
+    assert_eq!(
+        program_data.upgrade_authority_address,
+        Some(authority_keypair_1.pubkey())
     );
 }

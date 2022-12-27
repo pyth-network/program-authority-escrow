@@ -137,11 +137,11 @@ impl EscrowSimulator {
 
     pub async fn propose(
         &mut self,
-        old_authority_keypair: &Keypair,
+        current_authority_keypair: &Keypair,
         new_authority: &Pubkey,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Propose::populate(
-            &old_authority_keypair.pubkey(),
+            &current_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
             &self.escrow_address,
@@ -154,17 +154,17 @@ impl EscrowSimulator {
             data:       crate::instruction::Propose.data(),
         };
 
-        self.process_ix(instruction, &vec![old_authority_keypair])
+        self.process_ix(instruction, &vec![current_authority_keypair])
             .await
     }
 
     pub async fn revert(
         &mut self,
-        old_authority_keypair: &Keypair,
+        current_authority_keypair: &Keypair,
         new_authority: &Pubkey,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Propose::populate(
-            &old_authority_keypair.pubkey(),
+            &current_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
             &self.escrow_address,
@@ -177,17 +177,17 @@ impl EscrowSimulator {
             data:       crate::instruction::Revert.data(),
         };
 
-        self.process_ix(instruction, &vec![old_authority_keypair])
+        self.process_ix(instruction, &vec![current_authority_keypair])
             .await
     }
 
     pub async fn accept(
         &mut self,
-        old_authority: &Pubkey,
+        current_authority: &Pubkey,
         new_authority_keypair: &Keypair,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Accept::populate(
-            old_authority,
+            current_authority,
             &new_authority_keypair.pubkey(),
             &self.helloworld_address,
             &self.escrow_address,
