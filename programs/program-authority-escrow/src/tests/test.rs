@@ -9,15 +9,15 @@ use {
 #[tokio::test]
 async fn test() {
     let new_authority_keypair = Keypair::new();
-    let mut simulator = EscrowSimulator::new().await;
+    let (mut simulator, current_authority_keypair) = EscrowSimulator::new().await;
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(simulator.initial_upgrade_authority.pubkey())
+        Some(current_authority_keypair.pubkey())
     );
     simulator
-        .propose(&new_authority_keypair.pubkey())
+        .propose(&current_authority_keypair, &new_authority_keypair.pubkey())
         .await
         .unwrap();
 
@@ -25,22 +25,22 @@ async fn test() {
     assert_eq!(
         program_data.upgrade_authority_address,
         Some(simulator.get_escrow_authority(
-            &simulator.initial_upgrade_authority.pubkey(),
+            &current_authority_keypair.pubkey(),
             &new_authority_keypair.pubkey()
         ))
     );
     simulator
-        .revert(&new_authority_keypair.pubkey())
+        .revert(&current_authority_keypair, &new_authority_keypair.pubkey())
         .await
         .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(
         program_data.upgrade_authority_address,
-        Some(simulator.initial_upgrade_authority.pubkey())
+        Some(current_authority_keypair.pubkey())
     );
     simulator
-        .propose(&new_authority_keypair.pubkey())
+        .propose(&current_authority_keypair, &new_authority_keypair.pubkey())
         .await
         .unwrap();
 
@@ -48,11 +48,14 @@ async fn test() {
     assert_eq!(
         program_data.upgrade_authority_address,
         Some(simulator.get_escrow_authority(
-            &simulator.initial_upgrade_authority.pubkey(),
+            &current_authority_keypair.pubkey(),
             &new_authority_keypair.pubkey()
         ))
     );
-    simulator.accept(&new_authority_keypair).await.unwrap();
+    simulator
+        .accept(&current_authority_keypair.pubkey(), &new_authority_keypair)
+        .await
+        .unwrap();
 
     let program_data = simulator.get_program_data().await;
     assert_eq!(

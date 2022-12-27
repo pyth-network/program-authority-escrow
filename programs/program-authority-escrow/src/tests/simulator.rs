@@ -33,12 +33,42 @@ use {
 
 
 pub struct EscrowSimulator {
-    banks_client:                  BanksClient,
-    recent_blockhash:              Hash,
-    genesis_keypair:               Keypair,
-    helloworld_address:            Pubkey,
-    pub initial_upgrade_authority: Keypair,
-    escrow_address:                Pubkey,
+    banks_client:       BanksClient,
+    recent_blockhash:   Hash,
+    genesis_keypair:    Keypair,
+    helloworld_address: Pubkey,
+    escrow_address:     Pubkey,
+}
+
+impl EscrowSimulator {
+    /// Deploys the executor program as upgradable
+    pub async fn new() -> (EscrowSimulator, Keypair) {
+        let mut bpf_data = read_file(PathBuf::from("../../tests/fixtures/helloworld.so"));
+
+        let escrow_address = crate::id();
+
+        let mut program_test = ProgramTest::new("program_authority_escrow", escrow_address, None);
+        let upgrade_authority = Keypair::new();
+
+        let helloworld_address = add_program_as_upgradable(
+            &mut bpf_data,
+            &upgrade_authority.pubkey(),
+            &mut program_test,
+        );
+
+        let (banks_client, genesis_keypair, recent_blockhash) = program_test.start().await;
+
+        (
+            EscrowSimulator {
+                banks_client,
+                recent_blockhash,
+                genesis_keypair,
+                helloworld_address,
+                escrow_address,
+            },
+            upgrade_authority,
+        )
+    }
 }
 
 pub fn add_program_as_upgradable(
@@ -87,34 +117,6 @@ pub fn add_program_as_upgradable(
     program_key
 }
 
-impl EscrowSimulator {
-    /// Deploys the executor program as upgradable
-    pub async fn new() -> EscrowSimulator {
-        let mut bpf_data = read_file(PathBuf::from("../../tests/fixtures/helloworld.so"));
-
-        let escrow_address = crate::id();
-
-        let mut program_test = ProgramTest::new("program_authority_escrow", escrow_address, None);
-        let upgrade_authority = Keypair::new();
-
-        let helloworld_address = add_program_as_upgradable(
-            &mut bpf_data,
-            &upgrade_authority.pubkey(),
-            &mut program_test,
-        );
-
-        let (banks_client, genesis_keypair, recent_blockhash) = program_test.start().await;
-
-        EscrowSimulator {
-            banks_client,
-            recent_blockhash,
-            initial_upgrade_authority: upgrade_authority,
-            genesis_keypair,
-            helloworld_address,
-            escrow_address,
-        }
-    }
-}
 
 impl EscrowSimulator {
     async fn process_ix(
@@ -133,9 +135,13 @@ impl EscrowSimulator {
         self.banks_client.process_transaction(transaction).await
     }
 
-    pub async fn propose(&mut self, new_authority: &Pubkey) -> Result<(), BanksClientError> {
+    pub async fn propose(
+        &mut self,
+        old_authority_keypair: &Keypair,
+        new_authority: &Pubkey,
+    ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Propose::populate(
-            &self.initial_upgrade_authority.pubkey(),
+            &old_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
             &self.escrow_address,
@@ -148,16 +154,17 @@ impl EscrowSimulator {
             data:       crate::instruction::Propose.data(),
         };
 
-        self.process_ix(
-            instruction,
-            &vec![&copy_keypair(&self.initial_upgrade_authority)],
-        )
-        .await
+        self.process_ix(instruction, &vec![old_authority_keypair])
+            .await
     }
 
-    pub async fn revert(&mut self, new_authority: &Pubkey) -> Result<(), BanksClientError> {
+    pub async fn revert(
+        &mut self,
+        old_authority_keypair: &Keypair,
+        new_authority: &Pubkey,
+    ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Propose::populate(
-            &self.initial_upgrade_authority.pubkey(),
+            &old_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
             &self.escrow_address,
@@ -170,19 +177,17 @@ impl EscrowSimulator {
             data:       crate::instruction::Revert.data(),
         };
 
-        self.process_ix(
-            instruction,
-            &vec![&copy_keypair(&self.initial_upgrade_authority)],
-        )
-        .await
+        self.process_ix(instruction, &vec![old_authority_keypair])
+            .await
     }
 
     pub async fn accept(
         &mut self,
+        old_authority: &Pubkey,
         new_authority_keypair: &Keypair,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Accept::populate(
-            &self.initial_upgrade_authority.pubkey(),
+            old_authority,
             &new_authority_keypair.pubkey(),
             &self.helloworld_address,
             &self.escrow_address,
@@ -227,11 +232,6 @@ impl EscrowSimulator {
         .0
     }
 }
-
-pub fn copy_keypair(keypair: &Keypair) -> Keypair {
-    Keypair::from_bytes(&keypair.to_bytes()).unwrap()
-}
-
 
 impl crate::accounts::Propose {
     pub fn populate(
@@ -288,19 +288,3 @@ impl crate::accounts::Accept {
         }
     }
 }
-
-
-//     /// Start local validator based on the current bench
-//     // pub async fn start(self) -> ExecutorSimulator {
-//     //     // Start validator
-//     //     let (banks_client, genesis_keypair, recent_blockhash) = self.program_test.start().await;
-
-//     //     ExecutorSimulator {
-//     //         banks_client,
-//     //         payer: genesis_keypair,
-//     //         last_blockhash: recent_blockhash,
-//     //         program_id: self.program_id,
-//     //     }
-//     // }
-
-// }
