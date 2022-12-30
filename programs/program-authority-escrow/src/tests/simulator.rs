@@ -140,7 +140,7 @@ impl EscrowSimulator {
         current_authority_keypair: &Keypair,
         new_authority: &Pubkey,
     ) -> Result<(), BanksClientError> {
-        let account_metas = crate::accounts::Propose::populate(
+        let account_metas = crate::accounts::Propose::create(
             &current_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
@@ -163,7 +163,7 @@ impl EscrowSimulator {
         current_authority_keypair: &Keypair,
         new_authority: &Pubkey,
     ) -> Result<(), BanksClientError> {
-        let account_metas = crate::accounts::Propose::populate(
+        let account_metas = crate::accounts::Propose::create(
             &current_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
@@ -186,7 +186,7 @@ impl EscrowSimulator {
         current_authority: &Pubkey,
         new_authority_keypair: &Keypair,
     ) -> Result<(), BanksClientError> {
-        let account_metas = crate::accounts::Accept::populate(
+        let account_metas = crate::accounts::Accept::create(
             current_authority,
             &new_authority_keypair.pubkey(),
             &self.helloworld_address,
@@ -234,7 +234,7 @@ impl EscrowSimulator {
 }
 
 impl crate::accounts::Propose {
-    pub fn populate(
+    pub fn create(
         current_authority: &Pubkey,
         new_authority: &Pubkey,
         program_account: &Pubkey,
@@ -262,7 +262,7 @@ impl crate::accounts::Propose {
 }
 
 impl crate::accounts::Accept {
-    pub fn populate(
+    pub fn create(
         current_authority: &Pubkey,
         new_authority: &Pubkey,
         program_account: &Pubkey,
