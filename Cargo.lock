@@ -2533,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "program-authority-escrow"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anchor-lang",
  "bincode",
