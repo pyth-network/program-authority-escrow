@@ -41,7 +41,6 @@ pub struct TimelockSimulator {
 }
 
 impl TimelockSimulator {
-    /// Deploys the executor program as upgradable
     pub async fn new() -> (TimelockSimulator, Keypair) {
         let mut bpf_data = read_file(PathBuf::from("../../tests/fixtures/helloworld.so"));
 
