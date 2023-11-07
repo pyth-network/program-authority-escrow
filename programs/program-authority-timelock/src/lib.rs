@@ -16,7 +16,6 @@ use anchor_lang::{
 mod tests;
 
 declare_id!("escMHe7kSqPcDHx4HU44rAHhgdTLBZkUrU39aN8kMcL");
-
 const ONE_YEAR : i64 = 365 * 24 * 60 * 60;
 
 #[program]
@@ -37,6 +36,7 @@ pub mod program_authority_escrow {
             &ctx.accounts.to_account_infos(),
         )?;
 
+        // Check that the timelock is no longer than 1 year
         if Clock::get()?.unix_timestamp.saturating_add(ONE_YEAR) < timestamp {
             return Err(ErrorCode::TimestampTooLate.into());
         }
@@ -47,11 +47,11 @@ pub mod program_authority_escrow {
     pub fn transfer(ctx: Context<Transfer>, timestamp : i64) -> Result<()> {
         let new_authority = &ctx.accounts.new_authority;
         let escrow_authority = &ctx.accounts.escrow_authority;
-        let program = &ctx.accounts.program_account;
+        let program_account = &ctx.accounts.program_account;
 
         invoke_signed(
             &bpf_loader_upgradeable::set_upgrade_authority(
-                &program.key(),
+                &program_account.key(),
                 &escrow_authority.key(),
                 Some(&new_authority.key()),
             ),
