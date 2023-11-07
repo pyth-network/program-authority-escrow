@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![allow(clippy::result_large_err)]
 
 use anchor_lang::{
@@ -16,13 +16,13 @@ use anchor_lang::{
 mod tests;
 
 declare_id!("escMHe7kSqPcDHx4HU44rAHhgdTLBZkUrU39aN8kMcL");
-const ONE_YEAR : i64 = 365 * 24 * 60 * 60;
+const ONE_YEAR: i64 = 365 * 24 * 60 * 60;
 
 #[program]
 pub mod program_authority_escrow {
     use super::*;
 
-    pub fn commit(ctx: Context<Commit>, timestamp : i64) -> Result<()> {
+    pub fn commit(ctx: Context<Commit>, timestamp: i64) -> Result<()> {
         let current_authority = &ctx.accounts.current_authority;
         let escrow_authority = &ctx.accounts.escrow_authority;
         let program_account = &ctx.accounts.program_account;
@@ -44,7 +44,7 @@ pub mod program_authority_escrow {
         Ok(())
     }
 
-    pub fn transfer(ctx: Context<Transfer>, timestamp : i64) -> Result<()> {
+    pub fn transfer(ctx: Context<Transfer>, timestamp: i64) -> Result<()> {
         let new_authority = &ctx.accounts.new_authority;
         let escrow_authority = &ctx.accounts.escrow_authority;
         let program_account = &ctx.accounts.program_account;

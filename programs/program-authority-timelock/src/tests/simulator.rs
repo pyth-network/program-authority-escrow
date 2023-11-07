@@ -1,11 +1,8 @@
-use anchor_lang::{context, prelude::Clock};
-use solana_program_test::{ProgramTestContext, ProgramTestError};
-
-use crate::instruction;
-
 use {
+    crate::instruction,
     anchor_lang::{
         prelude::{
+            Clock,
             Pubkey,
             Rent,
             UpgradeableLoaderState,
@@ -17,14 +14,14 @@ use {
     },
     solana_program_test::{
         read_file,
-        BanksClient,
         BanksClientError,
         ProgramTest,
+        ProgramTestContext,
+        ProgramTestError,
     },
     solana_sdk::{
         account::Account,
         bpf_loader_upgradeable,
-        hash::Hash,
         instruction::Instruction,
         signature::{
             Keypair,
@@ -37,15 +34,15 @@ use {
 };
 
 
-pub struct EscrowSimulator {
-    context:               ProgramTestContext,
+pub struct TimelockSimulator {
+    context:            ProgramTestContext,
     helloworld_address: Pubkey,
     escrow_address:     Pubkey,
 }
 
-impl EscrowSimulator {
+impl TimelockSimulator {
     /// Deploys the executor program as upgradable
-    pub async fn new() -> (EscrowSimulator, Keypair) {
+    pub async fn new() -> (TimelockSimulator, Keypair) {
         let mut bpf_data = read_file(PathBuf::from("../../tests/fixtures/helloworld.so"));
 
         let escrow_address = crate::id();
@@ -62,7 +59,7 @@ impl EscrowSimulator {
         let context = program_test.start_with_context().await;
 
         (
-            EscrowSimulator {
+            TimelockSimulator {
                 context,
                 helloworld_address,
                 escrow_address,
@@ -119,7 +116,7 @@ pub fn add_program_as_upgradable(
 }
 
 
-impl EscrowSimulator {
+impl TimelockSimulator {
     async fn process_ix(
         &mut self,
         instruction: Instruction,
@@ -128,32 +125,40 @@ impl EscrowSimulator {
         let mut transaction =
             Transaction::new_with_payer(&[instruction], Some(&self.context.payer.pubkey()));
 
-        let blockhash = self.context.banks_client.get_latest_blockhash().await.unwrap();
+        let blockhash = self
+            .context
+            .banks_client
+            .get_latest_blockhash()
+            .await
+            .unwrap();
 
         transaction.partial_sign(&[&self.context.payer], blockhash);
         transaction.partial_sign(signers, blockhash);
-        self.context.banks_client.process_transaction(transaction).await
+        self.context
+            .banks_client
+            .process_transaction(transaction)
+            .await
     }
 
     pub async fn commit(
         &mut self,
         current_authority_keypair: &Keypair,
         new_authority: &Pubkey,
-        timestamp : i64
+        timestamp: i64,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Commit::create(
             &current_authority_keypair.pubkey(),
-            &new_authority,
+            new_authority,
             &self.helloworld_address,
             &self.escrow_address,
-            timestamp
+            timestamp,
         )
         .to_account_metas(None);
 
         let instruction = Instruction {
             program_id: self.escrow_address,
             accounts:   account_metas,
-            data:      instruction::Commit{ timestamp}.data(),
+            data:       instruction::Commit { timestamp }.data(),
         };
 
         self.process_ix(instruction, &vec![current_authority_keypair])
@@ -163,24 +168,23 @@ impl EscrowSimulator {
     pub async fn transfer(
         &mut self,
         new_authority: &Pubkey,
-        timestamp : i64
+        timestamp: i64,
     ) -> Result<(), BanksClientError> {
         let account_metas = crate::accounts::Transfer::create(
-            &new_authority,
+            new_authority,
             &self.helloworld_address,
             &self.escrow_address,
-            timestamp
+            timestamp,
         )
         .to_account_metas(None);
 
         let instruction = Instruction {
             program_id: self.escrow_address,
             accounts:   account_metas,
-            data:       instruction::Transfer{ timestamp}.data(),
+            data:       instruction::Transfer { timestamp }.data(),
         };
 
-        self.process_ix(instruction, &vec![])
-            .await
+        self.process_ix(instruction, &vec![]).await
     }
 
     pub async fn get_program_data(&mut self) -> ProgramData {
@@ -191,7 +195,8 @@ impl EscrowSimulator {
         .0;
 
         let account = self
-            .context.banks_client
+            .context
+            .banks_client
             .get_account(program_data)
             .await
             .unwrap()
@@ -199,11 +204,7 @@ impl EscrowSimulator {
         return ProgramData::try_deserialize(&mut account.data.as_slice()).unwrap();
     }
 
-    pub fn get_escrow_authority(
-        &self,
-        new_authority: &Pubkey,
-        timestamp: i64,
-    ) -> Pubkey {
+    pub fn get_escrow_authority(&self, new_authority: &Pubkey, timestamp: i64) -> Pubkey {
         Pubkey::find_program_address(
             &[new_authority.as_ref(), timestamp.to_be_bytes().as_ref()],
             &self.escrow_address,
@@ -211,9 +212,17 @@ impl EscrowSimulator {
         .0
     }
 
-    pub async fn warp_to_timestamp(&mut self, timestamp : i64) -> Result<(), ProgramTestError> {
-        let current_clock = self.context.banks_client.get_sysvar::<Clock>().await.unwrap();
-        self.context.set_sysvar::<Clock>(&Clock {unix_timestamp : timestamp , ..current_clock});
+    pub async fn warp_to_timestamp(&mut self, timestamp: i64) -> Result<(), ProgramTestError> {
+        let current_clock = self
+            .context
+            .banks_client
+            .get_sysvar::<Clock>()
+            .await
+            .unwrap();
+        self.context.set_sysvar::<Clock>(&Clock {
+            unix_timestamp: timestamp,
+            ..current_clock
+        });
         Ok(())
     }
 
@@ -221,9 +230,8 @@ impl EscrowSimulator {
         let program_data = self.get_program_data().await;
         assert_eq!(
             program_data.upgrade_authority_address,
-            Some(upgrade_authority.clone())
+            Some(*upgrade_authority)
         );
-
     }
 }
 
@@ -233,7 +241,7 @@ impl crate::accounts::Commit {
         new_authority: &Pubkey,
         program_account: &Pubkey,
         escrow_address: &Pubkey,
-        timestamp : i64
+        timestamp: i64,
     ) -> Self {
         let escrow_authority = Pubkey::find_program_address(
             &[new_authority.as_ref(), timestamp.to_be_bytes().as_ref()],
@@ -258,11 +266,10 @@ impl crate::accounts::Commit {
 
 impl crate::accounts::Transfer {
     pub fn create(
-        // payer: &Pubkey,
         new_authority: &Pubkey,
         program_account: &Pubkey,
         escrow_address: &Pubkey,
-        timestamp : i64
+        timestamp: i64,
     ) -> Self {
         let escrow_authority = Pubkey::find_program_address(
             &[new_authority.as_ref(), timestamp.to_be_bytes().as_ref()],
@@ -275,7 +282,6 @@ impl crate::accounts::Transfer {
         )
         .0;
         crate::accounts::Transfer {
-            // payer: *payer,
             new_authority: *new_authority,
             escrow_authority,
             program_account: *program_account,
