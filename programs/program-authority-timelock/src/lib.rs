@@ -19,7 +19,7 @@ declare_id!("escMHe7kSqPcDHx4HU44rAHhgdTLBZkUrU39aN8kMcL");
 const ONE_YEAR: i64 = 365 * 24 * 60 * 60;
 
 #[program]
-pub mod program_authority_escrow {
+pub mod program_authority_timelock {
     use super::*;
 
     pub fn commit(ctx: Context<Commit>, timestamp: i64) -> Result<()> {

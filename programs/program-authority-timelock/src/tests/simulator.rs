@@ -37,16 +37,17 @@ use {
 pub struct TimelockSimulator {
     context:            ProgramTestContext,
     helloworld_address: Pubkey,
-    escrow_address:     Pubkey,
+    timelock_address:   Pubkey,
 }
 
 impl TimelockSimulator {
     pub async fn new() -> (TimelockSimulator, Keypair) {
         let mut bpf_data = read_file(PathBuf::from("../../tests/fixtures/helloworld.so"));
 
-        let escrow_address = crate::id();
+        let timelock_address = crate::id();
 
-        let mut program_test = ProgramTest::new("program_authority_timelock", escrow_address, None);
+        let mut program_test =
+            ProgramTest::new("program_authority_timelock", timelock_address, None);
         let upgrade_authority = Keypair::new();
 
         let helloworld_address = add_program_as_upgradable(
@@ -61,7 +62,7 @@ impl TimelockSimulator {
             TimelockSimulator {
                 context,
                 helloworld_address,
-                escrow_address,
+                timelock_address,
             },
             upgrade_authority,
         )
@@ -149,13 +150,13 @@ impl TimelockSimulator {
             &current_authority_keypair.pubkey(),
             new_authority,
             &self.helloworld_address,
-            &self.escrow_address,
+            &self.timelock_address,
             timestamp,
         )
         .to_account_metas(None);
 
         let instruction = Instruction {
-            program_id: self.escrow_address,
+            program_id: self.timelock_address,
             accounts:   account_metas,
             data:       instruction::Commit { timestamp }.data(),
         };
@@ -172,13 +173,13 @@ impl TimelockSimulator {
         let account_metas = crate::accounts::Transfer::create(
             new_authority,
             &self.helloworld_address,
-            &self.escrow_address,
+            &self.timelock_address,
             timestamp,
         )
         .to_account_metas(None);
 
         let instruction = Instruction {
-            program_id: self.escrow_address,
+            program_id: self.timelock_address,
             accounts:   account_metas,
             data:       instruction::Transfer { timestamp }.data(),
         };
@@ -206,7 +207,7 @@ impl TimelockSimulator {
     pub fn get_escrow_authority(&self, new_authority: &Pubkey, timestamp: i64) -> Pubkey {
         Pubkey::find_program_address(
             &[new_authority.as_ref(), timestamp.to_be_bytes().as_ref()],
-            &self.escrow_address,
+            &self.timelock_address,
         )
         .0
     }
