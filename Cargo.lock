@@ -2543,6 +2543,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "program-authority-timelock"
+version = "1.0.0"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "solana-program-test",
+ "solana-sdk",
+ "tokio",
+]
+
+[[package]]
 name = "qstring"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
