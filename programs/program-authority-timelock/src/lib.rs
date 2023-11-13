@@ -15,7 +15,7 @@ use anchor_lang::{
 #[cfg(test)]
 mod tests;
 
-declare_id!("escMHe7kSqPcDHx4HU44rAHhgdTLBZkUrU39aN8kMcL");
+declare_id!("t1monUESMN3oVEoAw9HQkaVX6hUGg3hkhN5wKaTvV5f");
 const ONE_YEAR: i64 = 365 * 24 * 60 * 60;
 
 #[program]
