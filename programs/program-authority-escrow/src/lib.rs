@@ -5,7 +5,10 @@ use anchor_lang::{
     prelude::*,
     solana_program::{
         bpf_loader_upgradeable,
-        program::{invoke, invoke_signed},
+        program::{
+            invoke,
+            invoke_signed,
+        },
     },
 };
 
@@ -83,29 +86,29 @@ pub mod program_authority_escrow {
 
 #[derive(Accounts)]
 pub struct Propose<'info> {
-    pub current_authority: Signer<'info>,
+    pub current_authority:     Signer<'info>,
     /// CHECK: Unchecked new authority, can be a native wallet or a PDA of another program
-    pub new_authority: AccountInfo<'info>,
+    pub new_authority:         AccountInfo<'info>,
     #[account(seeds = [current_authority.key().as_ref(),new_authority.key().as_ref()], bump)]
-    pub escrow_authority: SystemAccount<'info>,
+    pub escrow_authority:      SystemAccount<'info>,
     #[account(executable, constraint = matches!(program_account.as_ref(), UpgradeableLoaderState::Program{..}))]
-    pub program_account: Account<'info, UpgradeableLoaderState>,
+    pub program_account:       Account<'info, UpgradeableLoaderState>,
     #[account(mut, seeds = [program_account.key().as_ref()], bump, seeds::program = bpf_upgradable_loader.key())]
-    pub program_data: Account<'info, ProgramData>,
+    pub program_data:          Account<'info, ProgramData>,
     pub bpf_upgradable_loader: Program<'info, BpfUpgradableLoader>,
 }
 
 #[derive(Accounts)]
 pub struct Accept<'info> {
     /// CHECK: CPI will have the wrong seeds and fail if this is the wrong current authority
-    pub current_authority: AccountInfo<'info>,
-    pub new_authority: Signer<'info>,
+    pub current_authority:     AccountInfo<'info>,
+    pub new_authority:         Signer<'info>,
     #[account(seeds = [current_authority.key().as_ref(),new_authority.key().as_ref()], bump)]
-    pub escrow_authority: SystemAccount<'info>,
+    pub escrow_authority:      SystemAccount<'info>,
     #[account(executable, constraint = matches!(program_account.as_ref(), UpgradeableLoaderState::Program{..}))]
-    pub program_account: Account<'info, UpgradeableLoaderState>,
+    pub program_account:       Account<'info, UpgradeableLoaderState>,
     #[account(mut, seeds = [program_account.key().as_ref()], bump, seeds::program = bpf_upgradable_loader.key())]
-    pub program_data: Account<'info, ProgramData>,
+    pub program_data:          Account<'info, ProgramData>,
     pub bpf_upgradable_loader: Program<'info, BpfUpgradableLoader>,
 }
 

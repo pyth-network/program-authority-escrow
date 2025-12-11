@@ -1,17 +1,32 @@
 use {
     crate::instruction,
     anchor_lang::{
-        prelude::{Clock, Pubkey, Rent, UpgradeableLoaderState},
-        AccountDeserialize, InstructionData, ProgramData, ToAccountMetas,
+        prelude::{
+            Clock,
+            Pubkey,
+            Rent,
+            UpgradeableLoaderState,
+        },
+        AccountDeserialize,
+        InstructionData,
+        ProgramData,
+        ToAccountMetas,
     },
     solana_program_test::{
-        read_file, BanksClientError, ProgramTest, ProgramTestContext, ProgramTestError,
+        read_file,
+        BanksClientError,
+        ProgramTest,
+        ProgramTestContext,
+        ProgramTestError,
     },
     solana_sdk::{
         account::Account,
         bpf_loader_upgradeable,
         instruction::Instruction,
-        signature::{Keypair, Signer},
+        signature::{
+            Keypair,
+            Signer,
+        },
         stake_history::Epoch,
         transaction::Transaction,
     },
@@ -19,9 +34,9 @@ use {
 };
 
 pub struct TimelockSimulator {
-    context: ProgramTestContext,
+    context:            ProgramTestContext,
     helloworld_address: Pubkey,
-    timelock_address: Pubkey,
+    timelock_address:   Pubkey,
 }
 
 impl TimelockSimulator {
@@ -66,7 +81,7 @@ pub fn add_program_as_upgradable(
         programdata_address: programdata_key,
     };
     let programdata_deserialized = UpgradeableLoaderState::ProgramData {
-        slot: 1,
+        slot:                      1,
         upgrade_authority_address: Some(*upgrade_authority),
     };
 
@@ -77,16 +92,16 @@ pub fn add_program_as_upgradable(
     programdata_vec.append(data);
 
     let program_account = Account {
-        lamports: Rent::default().minimum_balance(program_vec.len()),
-        data: program_vec,
-        owner: bpf_loader_upgradeable::ID,
+        lamports:   Rent::default().minimum_balance(program_vec.len()),
+        data:       program_vec,
+        owner:      bpf_loader_upgradeable::ID,
         executable: true,
         rent_epoch: Epoch::default(),
     };
     let programdata_account = Account {
-        lamports: Rent::default().minimum_balance(programdata_vec.len()),
-        data: programdata_vec,
-        owner: bpf_loader_upgradeable::ID,
+        lamports:   Rent::default().minimum_balance(programdata_vec.len()),
+        data:       programdata_vec,
+        owner:      bpf_loader_upgradeable::ID,
         executable: false,
         rent_epoch: Epoch::default(),
     };
@@ -139,8 +154,8 @@ impl TimelockSimulator {
 
         let instruction = Instruction {
             program_id: self.timelock_address,
-            accounts: account_metas,
-            data: instruction::Commit { timestamp }.data(),
+            accounts:   account_metas,
+            data:       instruction::Commit { timestamp }.data(),
         };
 
         self.process_ix(instruction, &vec![current_authority_keypair])
@@ -162,8 +177,8 @@ impl TimelockSimulator {
 
         let instruction = Instruction {
             program_id: self.timelock_address,
-            accounts: account_metas,
-            data: instruction::Transfer { timestamp }.data(),
+            accounts:   account_metas,
+            data:       instruction::Transfer { timestamp }.data(),
         };
 
         self.process_ix(instruction, &vec![]).await

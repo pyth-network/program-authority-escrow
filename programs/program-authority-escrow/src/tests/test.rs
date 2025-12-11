@@ -1,6 +1,9 @@
 use {
     crate::tests::simulator::EscrowSimulator,
-    solana_sdk::{signature::Keypair, signer::Signer},
+    solana_sdk::{
+        signature::Keypair,
+        signer::Signer,
+    },
 };
 
 #[tokio::test]
