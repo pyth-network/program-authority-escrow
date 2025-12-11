@@ -198,7 +198,7 @@ impl TimelockSimulator {
             .await
             .unwrap()
             .unwrap();
-        return ProgramData::try_deserialize(&mut account.data.as_slice()).unwrap();
+        ProgramData::try_deserialize(&mut account.data.as_slice()).unwrap()
     }
 
     pub fn get_escrow_authority(&self, new_authority: &Pubkey, timestamp: i64) -> Pubkey {

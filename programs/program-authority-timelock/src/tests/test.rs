@@ -17,10 +17,9 @@ impl From<ErrorCode> for TransactionError {
     fn from(val: ErrorCode) -> Self {
         TransactionError::InstructionError(
             0,
-            InstructionError::try_from(u64::from(ProgramError::from(
+            InstructionError::from(u64::from(ProgramError::from(
                 anchor_lang::prelude::Error::from(val),
-            )))
-            .unwrap(),
+            ))),
         )
     }
 }
