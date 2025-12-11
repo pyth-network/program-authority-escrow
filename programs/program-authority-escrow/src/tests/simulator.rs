@@ -1,43 +1,27 @@
 use {
     anchor_lang::{
-        prelude::{
-            Pubkey,
-            Rent,
-            UpgradeableLoaderState,
-        },
-        AccountDeserialize,
-        InstructionData,
-        ProgramData,
-        ToAccountMetas,
+        prelude::{Pubkey, Rent, UpgradeableLoaderState},
+        AccountDeserialize, InstructionData, ProgramData, ToAccountMetas,
     },
-    solana_program_test::{
-        read_file,
-        BanksClient,
-        BanksClientError,
-        ProgramTest,
-    },
+    solana_program_test::{read_file, BanksClient, BanksClientError, ProgramTest},
     solana_sdk::{
         account::Account,
         bpf_loader_upgradeable,
         hash::Hash,
         instruction::Instruction,
-        signature::{
-            Keypair,
-            Signer,
-        },
+        signature::{Keypair, Signer},
         stake_history::Epoch,
         transaction::Transaction,
     },
     std::path::PathBuf,
 };
 
-
 pub struct EscrowSimulator {
-    banks_client:       BanksClient,
-    recent_blockhash:   Hash,
-    genesis_keypair:    Keypair,
+    banks_client: BanksClient,
+    recent_blockhash: Hash,
+    genesis_keypair: Keypair,
     helloworld_address: Pubkey,
-    escrow_address:     Pubkey,
+    escrow_address: Pubkey,
 }
 
 impl EscrowSimulator {
@@ -80,12 +64,11 @@ pub fn add_program_as_upgradable(
     let (programdata_key, _) =
         Pubkey::find_program_address(&[&program_key.to_bytes()], &bpf_loader_upgradeable::id());
 
-
     let program_deserialized = UpgradeableLoaderState::Program {
         programdata_address: programdata_key,
     };
     let programdata_deserialized = UpgradeableLoaderState::ProgramData {
-        slot:                      1,
+        slot: 1,
         upgrade_authority_address: Some(*upgrade_authority),
     };
 
@@ -96,16 +79,16 @@ pub fn add_program_as_upgradable(
     programdata_vec.append(data);
 
     let program_account = Account {
-        lamports:   Rent::default().minimum_balance(program_vec.len()),
-        data:       program_vec,
-        owner:      bpf_loader_upgradeable::ID,
+        lamports: Rent::default().minimum_balance(program_vec.len()),
+        data: program_vec,
+        owner: bpf_loader_upgradeable::ID,
         executable: true,
         rent_epoch: Epoch::default(),
     };
     let programdata_account = Account {
-        lamports:   Rent::default().minimum_balance(programdata_vec.len()),
-        data:       programdata_vec,
-        owner:      bpf_loader_upgradeable::ID,
+        lamports: Rent::default().minimum_balance(programdata_vec.len()),
+        data: programdata_vec,
+        owner: bpf_loader_upgradeable::ID,
         executable: false,
         rent_epoch: Epoch::default(),
     };
@@ -116,7 +99,6 @@ pub fn add_program_as_upgradable(
 
     program_key
 }
-
 
 impl EscrowSimulator {
     async fn process_ix(
@@ -150,8 +132,8 @@ impl EscrowSimulator {
 
         let instruction = Instruction {
             program_id: self.escrow_address,
-            accounts:   account_metas,
-            data:       crate::instruction::Propose.data(),
+            accounts: account_metas,
+            data: crate::instruction::Propose.data(),
         };
 
         self.process_ix(instruction, &vec![current_authority_keypair])
@@ -173,8 +155,8 @@ impl EscrowSimulator {
 
         let instruction = Instruction {
             program_id: self.escrow_address,
-            accounts:   account_metas,
-            data:       crate::instruction::Revert.data(),
+            accounts: account_metas,
+            data: crate::instruction::Revert.data(),
         };
 
         self.process_ix(instruction, &vec![current_authority_keypair])
@@ -196,8 +178,8 @@ impl EscrowSimulator {
 
         let instruction = Instruction {
             program_id: self.escrow_address,
-            accounts:   account_metas,
-            data:       crate::instruction::Accept.data(),
+            accounts: account_metas,
+            data: crate::instruction::Accept.data(),
         };
 
         self.process_ix(instruction, &vec![new_authority_keypair])

@@ -1,9 +1,6 @@
 use {
     crate::tests::simulator::EscrowSimulator,
-    solana_sdk::{
-        signature::Keypair,
-        signer::Signer,
-    },
+    solana_sdk::{signature::Keypair, signer::Signer},
 };
 
 #[tokio::test]
@@ -99,7 +96,6 @@ async fn test() {
                 .get_escrow_authority(&authority_keypair_2.pubkey(), &authority_keypair_1.pubkey())
         )
     );
-
 
     simulator
         .accept(&authority_keypair_2.pubkey(), &authority_keypair_1)

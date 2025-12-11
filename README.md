@@ -10,3 +10,17 @@ The way it works :
 
 Basically, this program enforces that the new authority has signed before they accept the authority. 
 This makes errors where we mistakenly transfer the authority to a key that we don't own reversible.
+
+## Testing
+To run tests:
+```shell
+cargo test-sbf
+```
+
+## Building
+To build:
+
+```shell
+cargo build-sbf
+```
+Artifacts will be placed at: `target/deploy/*.so`

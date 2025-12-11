@@ -5,10 +5,7 @@ use anchor_lang::{
     prelude::*,
     solana_program::{
         bpf_loader_upgradeable,
-        program::{
-            invoke,
-            invoke_signed,
-        },
+        program::{invoke, invoke_signed},
     },
 };
 
@@ -59,7 +56,7 @@ pub mod program_authority_timelock {
             &[&[
                 new_authority.key().as_ref(),
                 timestamp.to_be_bytes().as_ref(),
-                &[*ctx.bumps.get("escrow_authority").unwrap()],
+                &[ctx.bumps.escrow_authority],
             ]],
         )?;
 
@@ -74,15 +71,15 @@ pub mod program_authority_timelock {
 #[derive(Accounts)]
 #[instruction(timestamp : i64)]
 pub struct Commit<'info> {
-    pub current_authority:     Signer<'info>,
+    pub current_authority: Signer<'info>,
     /// CHECK: Unchecked new authority, can be a native wallet or a PDA of another program
-    pub new_authority:         AccountInfo<'info>,
+    pub new_authority: AccountInfo<'info>,
     #[account(seeds = [new_authority.key().as_ref(), timestamp.to_be_bytes().as_ref()], bump)]
-    pub escrow_authority:      SystemAccount<'info>,
+    pub escrow_authority: SystemAccount<'info>,
     #[account(executable, constraint = matches!(program_account.as_ref(), UpgradeableLoaderState::Program{..}))]
-    pub program_account:       Account<'info, UpgradeableLoaderState>,
+    pub program_account: Account<'info, UpgradeableLoaderState>,
     #[account(mut, seeds = [program_account.key().as_ref()], bump, seeds::program = bpf_upgradable_loader.key())]
-    pub program_data:          Account<'info, ProgramData>,
+    pub program_data: Account<'info, ProgramData>,
     pub bpf_upgradable_loader: Program<'info, BpfUpgradableLoader>,
 }
 
@@ -90,13 +87,13 @@ pub struct Commit<'info> {
 #[instruction(timestamp : i64)]
 pub struct Transfer<'info> {
     /// CHECK: Unchecked new authority, can be a native wallet or a PDA of another program
-    pub new_authority:         AccountInfo<'info>,
+    pub new_authority: AccountInfo<'info>,
     #[account(seeds = [new_authority.key().as_ref(), timestamp.to_be_bytes().as_ref()], bump)]
-    pub escrow_authority:      SystemAccount<'info>,
+    pub escrow_authority: SystemAccount<'info>,
     #[account(executable, constraint = matches!(program_account.as_ref(), UpgradeableLoaderState::Program{..}))]
-    pub program_account:       Account<'info, UpgradeableLoaderState>,
+    pub program_account: Account<'info, UpgradeableLoaderState>,
     #[account(mut, seeds = [program_account.key().as_ref()], bump, seeds::program = bpf_upgradable_loader.key())]
-    pub program_data:          Account<'info, ProgramData>,
+    pub program_data: Account<'info, ProgramData>,
     pub bpf_upgradable_loader: Program<'info, BpfUpgradableLoader>,
 }
 
