@@ -30,7 +30,7 @@ async fn test() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64
-        + 24 * 60 * 1000;
+        + 24 * 60 * 60; // some timestamp in the UTC future, offset due to the system time potentially not matching UTC, this will ensure that its in the UTC future as well
     let (mut simulator, authority_keypair_1) = TimelockSimulator::new().await;
     let authority_keypair_2 = Keypair::new();
 
