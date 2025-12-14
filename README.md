@@ -1,26 +1,43 @@
 # program-authority-escrow
 
-A minimalistic, stateless program to safely transfer a solana program from one upgrade authority to another one.
+A stateless Solana program for safe program authority transfers.
 
-The way it works :
-- The current authority uses Propose to transfer the authority of any program to a PDA of the escrow seeded by (current_authority, new_authority)
-- Once the authority has been transferred two outcomes are possible : 
-  - If the current authority calls Revert, the PDA will give the authority back to the current authority 
-  - If the new authority calls Accept, the PDA will give the authority to the new authority
+The current authority calls `propose` to transfer authority to an escrow PDA seeded by `(current_authority, new_authority)`. From there:
+- The current authority can call `revert` to reclaim authority
+- The new authority can call `accept` to complete the transfer
 
-Basically, this program enforces that the new authority has signed before they accept the authority. 
-This makes errors where we mistakenly transfer the authority to a key that we don't own reversible.
+This ensures the new authority has signed before accepting, making accidental transfers to wrong keys reversible.
 
-## Testing
-To run tests:
+Build with `cargo build-sbf` and test with `cargo test-sbf`.
+
+## Scripts
+
+TypeScript scripts are provided to interact with the on-chain program. All scripts support:
+- File-based keypairs or Ledger hardware wallets
+- Squads v3 multisig proposals via `--multisig`
+
+Install dependencies with `yarn install`. See `scripts/helpers.ts` for documentation on CLI arguments.
+
+### Propose
+
+Transfer program authority to the escrow. The current authority proposes the transfer:
+
 ```shell
-cargo test-sbf
+yarn propose --keypair <path|ledger> --program <program_address> --authority <new_authority>
 ```
 
-## Building
-To build:
+### Accept
+
+Accept a proposed authority transfer. The new authority accepts:
 
 ```shell
-cargo build-sbf
+yarn accept --keypair <path|ledger> --program <program_address> --authority <previous_authority>
 ```
-Artifacts will be placed at: `target/deploy/*.so`
+
+### Revert
+
+Revert a proposed transfer before it's accepted. The current authority reverts:
+
+```shell
+yarn revert --keypair <path|ledger> --program <program_address> --authority <new_authority>
+```

@@ -1,12 +1,11 @@
-import { Wallet } from "@project-serum/anchor/dist/cjs/provider";
 import Transport, {
   StatusCodes,
   TransportStatusError,
 } from "@ledgerhq/hw-transport";
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 
-export class LedgerNodeWallet implements Wallet {
+export class LedgerNodeWallet {
   private _derivationPath: Buffer;
   private _transport: Transport;
   publicKey: PublicKey;
@@ -35,7 +34,12 @@ export class LedgerNodeWallet implements Wallet {
     return new LedgerNodeWallet(derivationPath, transport, publicKey);
   }
 
-  async signTransaction(transaction: Transaction): Promise<Transaction> {
+  async signTransaction<T extends Transaction | VersionedTransaction>(
+    transaction: T
+  ): Promise<T> {
+    if (transaction instanceof VersionedTransaction) {
+      throw new Error("VersionedTransaction not supported by Ledger");
+    }
     console.log("Please approve the transaction on your ledger device...");
     const transport = this._transport;
     const publicKey = this.publicKey;
@@ -46,10 +50,12 @@ export class LedgerNodeWallet implements Wallet {
       this._derivationPath
     );
     transaction.addSignature(publicKey, signature);
-    return transaction;
+    return transaction as T;
   }
 
-  async signAllTransactions(txs: Transaction[]): Promise<Transaction[]> {
+  async signAllTransactions<T extends Transaction | VersionedTransaction>(
+    txs: T[]
+  ): Promise<T[]> {
     return await Promise.all(txs.map((tx) => this.signTransaction(tx)));
   }
 }
@@ -143,7 +149,7 @@ async function send(
         buffer
       );
       if (response.length !== 2)
-        throw TransportStatusError(StatusCodes.INCORRECT_DATA);
+        throw new TransportStatusError(StatusCodes.INCORRECT_DATA);
 
       p2 |= P2_EXTEND;
       offset += MAX_PAYLOAD;

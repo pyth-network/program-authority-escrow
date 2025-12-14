@@ -20,6 +20,7 @@ default = []
 custom-heap = []
 custom-panic = []
 anchor-debug = []
+idl-build = ["anchor-lang/idl-build"]
 
 [dependencies]
 anchor-lang.workspace = true
@@ -29,4 +30,3 @@ solana-program-test.workspace = true
 solana-sdk.workspace = true
 tokio.workspace = true
 bincode.workspace = true
-
