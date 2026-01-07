@@ -1,48 +1,81 @@
 import { PublicKey } from "@solana/web3.js";
-import { getAuthorityPDA, DEFAULT_MULTISIG_PROGRAM_ID } from "@sqds/sdk";
-import BN from "bn.js";
 import {
   parseArgs,
   createWallet,
   initEscrowProgram,
   parseMultisig,
   executeOrPropose,
-} from "./helpers";
+  getMultisigVault,
+  BPF_UPGRADABLE_LOADER,
+} from "./lib/helpers";
 
-const BPF_UPGRADABLE_LOADER = new PublicKey(
-  "BPFLoaderUpgradeab1e11111111111111111111111"
-);
+function usage(): never {
+  console.error(`Usage: pnpm accept [options]
+
+Accept a proposed program authority transfer.
+
+Required:
+  -k, --keypair <path|ledger>       Path to keypair file or 'ledger' for hardware wallet.
+                                    This is the new authority (fee payer) accepting the transfer.
+  -p, --program <address>           Address of the program to accept authority for.
+  -a, --authority <address>         Address of the previous authority that proposed the transfer.
+
+Optional:
+  -d, --derivation-path <path>      Ledger derivation path as 'account/change' (default: 0).
+  -m, --multisig <address>          Squads v3 multisig address. When provided, the multisig
+                                    vault becomes the new authority and a proposal is created
+                                    instead of executing directly.
+  -M, --multisig-program <address>  Squads v3 program address (default: SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu).
+  -i, --authority-index <index>     Multisig vault/authority index (default: 1).
+  -u, --url <rpc_url>               RPC endpoint URL (default: https://api.mainnet-beta.solana.com).
+`);
+  process.exit(1);
+}
 
 async function main() {
   const args = parseArgs();
+
+  if (!args.program || !args.authority || !args.keypair) {
+    usage();
+  }
+
+  let programToTransfer: PublicKey;
+  let currentAuthority: PublicKey;
+
+  try {
+    programToTransfer = new PublicKey(args.program);
+  } catch {
+    console.error(`Invalid program address: ${args.program}`);
+    process.exit(1);
+  }
+
+  try {
+    currentAuthority = new PublicKey(args.authority);
+  } catch {
+    console.error(`Invalid authority address: ${args.authority}`);
+    process.exit(1);
+  }
+
   const wallet = await createWallet(args);
   const { connection, program, programId } = initEscrowProgram(args, wallet);
   const multisigAddress = parseMultisig(args);
+  const multisigProgramId = new PublicKey(args["multisig-program"]);
+  const authorityIndex = parseInt(args["authority-index"], 10);
 
-  const programToTransfer = new PublicKey(args.program);
-  const currentAuthority = new PublicKey(args.authority);
-
-  const programData = PublicKey.findProgramAddressSync(
+  const [programData] = PublicKey.findProgramAddressSync(
     [programToTransfer.toBuffer()],
     BPF_UPGRADABLE_LOADER
-  )[0];
+  );
 
   // In multisig mode, the vault becomes the new authority
-  let newAuthority: PublicKey;
-  if (multisigAddress) {
-    [newAuthority] = getAuthorityPDA(
-      multisigAddress,
-      new BN(1),
-      DEFAULT_MULTISIG_PROGRAM_ID
-    );
-  } else {
-    newAuthority = wallet.publicKey;
-  }
+  const newAuthority = multisigAddress
+    ? getMultisigVault(multisigAddress, authorityIndex, multisigProgramId)
+    : wallet.publicKey;
 
-  const escrowAuthority = PublicKey.findProgramAddressSync(
+  const [escrowAuthority] = PublicKey.findProgramAddressSync(
     [currentAuthority.toBuffer(), newAuthority.toBuffer()],
     programId
-  )[0];
+  );
 
   console.log("Accepting program authority transfer...");
   console.log(`  Wallet: ${wallet.publicKey.toBase58()}`);
@@ -57,18 +90,23 @@ async function main() {
 
   const instruction = await program.methods
     .accept()
-    .accounts({
-      currentAuthority: currentAuthority,
-      newAuthority: newAuthority,
-      programAccount: programToTransfer,
-    })
     .accountsPartial({
-      escrowAuthority: escrowAuthority,
-      programData: programData,
+      currentAuthority,
+      newAuthority,
+      programAccount: programToTransfer,
+      escrowAuthority,
+      programData,
     })
     .instruction();
 
-  await executeOrPropose(connection, wallet, multisigAddress, instruction);
+  await executeOrPropose(
+    connection,
+    wallet,
+    multisigAddress,
+    instruction,
+    authorityIndex,
+    multisigProgramId
+  );
 }
 
 main().catch((err) => {

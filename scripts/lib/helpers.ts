@@ -15,9 +15,17 @@ import {
 } from "@solana/web3.js";
 import { LedgerNodeWallet } from "./ledger";
 import * as fs from "fs";
-import type { ProgramAuthorityEscrow } from "../target/types/program_authority_escrow";
-import IDL from "../target/idl/program_authority_escrow.json";
-import Squads from "@sqds/sdk";
+import type { ProgramAuthorityEscrow } from "../../target/types/program_authority_escrow";
+import IDL from "../../target/idl/program_authority_escrow.json";
+import Squads, {
+  getAuthorityPDA,
+  DEFAULT_MULTISIG_PROGRAM_ID,
+} from "@sqds/sdk";
+import BN from "bn.js";
+
+export const BPF_UPGRADABLE_LOADER = new PublicKey(
+  "BPFLoaderUpgradeab1e11111111111111111111111"
+);
 
 export interface Args {
   program: string;
@@ -25,6 +33,8 @@ export interface Args {
   keypair: string;
   "derivation-path": string;
   multisig?: string;
+  "multisig-program": string;
+  "authority-index": string;
   url: string;
 }
 
@@ -47,6 +57,10 @@ export function parseArgs(): Args {
       // proposal instead. You probably want to use this with `accept` when
       // transfering the program authority to a multisig.
       "multisig",
+      // "multisig-program" is the address of the Squads v3 multisig program.
+      "multisig-program",
+      // "authority-index" is the vault index of the multisig to use.
+      "authority-index",
       // "url" is the URL for the RPC endpoint.
       "url",
     ],
@@ -56,9 +70,16 @@ export function parseArgs(): Args {
       k: "keypair",
       d: "derivation-path",
       m: "multisig",
+      M: "multisig-program",
+      i: "authority-index",
       u: "url",
     },
-    default: { url: "https://mainnet.fogo.io", "derivation-path": "0" },
+    default: {
+      url: "https://api.mainnet-beta.solana.com",
+      "derivation-path": "0",
+      "multisig-program": DEFAULT_MULTISIG_PROGRAM_ID.toBase58(),
+      "authority-index": "1",
+    },
   });
 
   return args as unknown as Args;
@@ -108,16 +129,38 @@ export function parseMultisig(args: Args): PublicKey | undefined {
   }
 }
 
+export function getMultisigVault(
+  multisigAddress: PublicKey,
+  authorityIndex: number,
+  multisigProgramId: PublicKey = DEFAULT_MULTISIG_PROGRAM_ID
+): PublicKey {
+  const [vault] = getAuthorityPDA(
+    multisigAddress,
+    new BN(authorityIndex),
+    multisigProgramId
+  );
+  return vault;
+}
+
 export async function executeOrPropose(
   connection: Connection,
   wallet: Wallet | LedgerNodeWallet,
   multisigAddress: PublicKey | undefined,
-  instruction: TransactionInstruction
+  instruction: TransactionInstruction,
+  authorityIndex: number = 1,
+  multisigProgramId: PublicKey = DEFAULT_MULTISIG_PROGRAM_ID
 ): Promise<void> {
   try {
     if (multisigAddress) {
-      const squads = new Squads({ connection, wallet: wallet as any });
-      const msTransaction = await squads.createTransaction(multisigAddress, 1);
+      const squads = new Squads({
+        connection,
+        wallet: wallet as any,
+        multisigProgramId,
+      });
+      const msTransaction = await squads.createTransaction(
+        multisigAddress,
+        authorityIndex
+      );
       await squads.addInstruction(msTransaction.publicKey, instruction);
       await squads.activateTransaction(msTransaction.publicKey);
       await squads.approveTransaction(msTransaction.publicKey);

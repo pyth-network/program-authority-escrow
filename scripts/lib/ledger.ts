@@ -30,27 +30,21 @@ export class LedgerNodeWallet {
       derivationChange
     );
     const publicKey = await getPublicKey(transport, derivationPath);
-    console.log(`Loaded ledger: ${publicKey.toBase58()}}`);
+    console.log(`Loaded ledger: ${publicKey.toBase58()}`);
     return new LedgerNodeWallet(derivationPath, transport, publicKey);
   }
 
   async signTransaction<T extends Transaction | VersionedTransaction>(
     transaction: T
   ): Promise<T> {
-    if (transaction instanceof VersionedTransaction) {
-      throw new Error("VersionedTransaction not supported by Ledger");
-    }
     console.log("Please approve the transaction on your ledger device...");
-    const transport = this._transport;
-    const publicKey = this.publicKey;
-
     const signature = await signTransaction(
-      transport,
+      this._transport,
       transaction,
       this._derivationPath
     );
-    transaction.addSignature(publicKey, signature);
-    return transaction as T;
+    transaction.addSignature(this.publicKey, signature);
+    return transaction;
   }
 
   async signAllTransactions<T extends Transaction | VersionedTransaction>(
@@ -99,8 +93,7 @@ const MAX_PAYLOAD = 255;
 
 const LEDGER_CLA = 0xe0;
 
-/** @internal */
-export async function getPublicKey(
+async function getPublicKey(
   transport: Transport,
   derivationPath: Buffer
 ): Promise<PublicKey> {
@@ -113,16 +106,18 @@ export async function getPublicKey(
   return new PublicKey(bytes);
 }
 
-/** @internal */
-export async function signTransaction(
+async function signTransaction(
   transport: Transport,
-  transaction: Transaction,
+  transaction: Transaction | VersionedTransaction,
   derivationPath: Buffer
 ): Promise<Buffer> {
   const paths = Buffer.alloc(1);
   paths.writeUInt8(1, 0);
 
-  const message = transaction.serializeMessage();
+  const message =
+    transaction instanceof VersionedTransaction
+      ? transaction.message.serialize()
+      : transaction.serializeMessage();
   const data = Buffer.concat([paths, derivationPath, message]);
 
   return await send(transport, INS_SIGN_MESSAGE, P1_CONFIRM, data);
