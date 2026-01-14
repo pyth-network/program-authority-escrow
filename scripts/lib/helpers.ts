@@ -11,6 +11,7 @@ import {
   PublicKey,
   Transaction,
   TransactionInstruction,
+  sendAndConfirmRawTransaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import { LedgerNodeWallet } from "./ledger";
@@ -169,9 +170,14 @@ export async function executeOrPropose(
       );
     } else {
       const tx = new Transaction().add(instruction);
-      const sig = await sendAndConfirmTransaction(connection, tx, [
-        (wallet as Wallet).payer,
-      ]);
+      const { blockhash } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = wallet.publicKey;
+      await wallet.signTransaction(tx);
+      const sig = await sendAndConfirmRawTransaction(
+        connection,
+        tx.serialize()
+      );
       console.log(`Signature: ${sig}`);
     }
   } catch (err) {
