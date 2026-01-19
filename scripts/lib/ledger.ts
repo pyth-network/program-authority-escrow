@@ -1,12 +1,11 @@
-import { Wallet } from "@project-serum/anchor/dist/cjs/provider";
 import Transport, {
   StatusCodes,
   TransportStatusError,
 } from "@ledgerhq/hw-transport";
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 
-export class LedgerNodeWallet implements Wallet {
+export class LedgerNodeWallet {
   private _derivationPath: Buffer;
   private _transport: Transport;
   publicKey: PublicKey;
@@ -31,25 +30,26 @@ export class LedgerNodeWallet implements Wallet {
       derivationChange
     );
     const publicKey = await getPublicKey(transport, derivationPath);
-    console.log(`Loaded ledger: ${publicKey.toBase58()}}`);
+    console.log(`Loaded ledger: ${publicKey.toBase58()}`);
     return new LedgerNodeWallet(derivationPath, transport, publicKey);
   }
 
-  async signTransaction(transaction: Transaction): Promise<Transaction> {
+  async signTransaction<T extends Transaction | VersionedTransaction>(
+    transaction: T
+  ): Promise<T> {
     console.log("Please approve the transaction on your ledger device...");
-    const transport = this._transport;
-    const publicKey = this.publicKey;
-
     const signature = await signTransaction(
-      transport,
+      this._transport,
       transaction,
       this._derivationPath
     );
-    transaction.addSignature(publicKey, signature);
+    transaction.addSignature(this.publicKey, signature);
     return transaction;
   }
 
-  async signAllTransactions(txs: Transaction[]): Promise<Transaction[]> {
+  async signAllTransactions<T extends Transaction | VersionedTransaction>(
+    txs: T[]
+  ): Promise<T[]> {
     return await Promise.all(txs.map((tx) => this.signTransaction(tx)));
   }
 }
@@ -93,8 +93,7 @@ const MAX_PAYLOAD = 255;
 
 const LEDGER_CLA = 0xe0;
 
-/** @internal */
-export async function getPublicKey(
+async function getPublicKey(
   transport: Transport,
   derivationPath: Buffer
 ): Promise<PublicKey> {
@@ -107,16 +106,18 @@ export async function getPublicKey(
   return new PublicKey(bytes);
 }
 
-/** @internal */
-export async function signTransaction(
+async function signTransaction(
   transport: Transport,
-  transaction: Transaction,
+  transaction: Transaction | VersionedTransaction,
   derivationPath: Buffer
 ): Promise<Buffer> {
   const paths = Buffer.alloc(1);
   paths.writeUInt8(1, 0);
 
-  const message = transaction.serializeMessage();
+  const message =
+    transaction instanceof VersionedTransaction
+      ? transaction.message.serialize()
+      : transaction.serializeMessage();
   const data = Buffer.concat([paths, derivationPath, message]);
 
   return await send(transport, INS_SIGN_MESSAGE, P1_CONFIRM, data);
@@ -143,7 +144,7 @@ async function send(
         buffer
       );
       if (response.length !== 2)
-        throw TransportStatusError(StatusCodes.INCORRECT_DATA);
+        throw new TransportStatusError(StatusCodes.INCORRECT_DATA);
 
       p2 |= P2_EXTEND;
       offset += MAX_PAYLOAD;

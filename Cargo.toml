@@ -1,7 +1,23 @@
 [workspace]
+resolver = "2"
 members = [
     "programs/*"
 ]
+
+[workspace.package]
+version = "1.0.0"
+description = "Program authority escrow utility for SVM."
+edition = "2021"
+
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+[workspace.dependencies]
+anchor-lang = "0.30.1"
+solana-program-test = "=1.18.22"
+solana-sdk = "=1.18.22"
+tokio = "1"
+bincode = "1.3"
 
 [profile.release]
 overflow-checks = true

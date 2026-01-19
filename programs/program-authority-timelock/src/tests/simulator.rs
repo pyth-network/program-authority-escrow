@@ -33,7 +33,6 @@ use {
     std::path::PathBuf,
 };
 
-
 pub struct TimelockSimulator {
     context:            ProgramTestContext,
     helloworld_address: Pubkey,
@@ -78,7 +77,6 @@ pub fn add_program_as_upgradable(
     let (programdata_key, _) =
         Pubkey::find_program_address(&[&program_key.to_bytes()], &bpf_loader_upgradeable::id());
 
-
     let program_deserialized = UpgradeableLoaderState::Program {
         programdata_address: programdata_key,
     };
@@ -114,7 +112,6 @@ pub fn add_program_as_upgradable(
 
     program_key
 }
-
 
 impl TimelockSimulator {
     async fn process_ix(
@@ -201,7 +198,7 @@ impl TimelockSimulator {
             .await
             .unwrap()
             .unwrap();
-        return ProgramData::try_deserialize(&mut account.data.as_slice()).unwrap();
+        ProgramData::try_deserialize(&mut account.data.as_slice()).unwrap()
     }
 
     pub fn get_escrow_authority(&self, new_authority: &Pubkey, timestamp: i64) -> Pubkey {

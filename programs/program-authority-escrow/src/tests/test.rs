@@ -100,7 +100,6 @@ async fn test() {
         )
     );
 
-
     simulator
         .accept(&authority_keypair_2.pubkey(), &authority_keypair_1)
         .await

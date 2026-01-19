@@ -59,7 +59,7 @@ pub mod program_authority_timelock {
             &[&[
                 new_authority.key().as_ref(),
                 timestamp.to_be_bytes().as_ref(),
-                &[*ctx.bumps.get("escrow_authority").unwrap()],
+                &[ctx.bumps.escrow_authority],
             ]],
         )?;
 

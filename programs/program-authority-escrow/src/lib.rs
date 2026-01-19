@@ -55,7 +55,7 @@ pub mod program_authority_escrow {
             &[&[
                 current_authority.key().as_ref(),
                 new_authority.key().as_ref(),
-                &[*ctx.bumps.get("escrow_authority").unwrap()],
+                &[ctx.bumps.escrow_authority],
             ]],
         )?;
         Ok(())
@@ -77,7 +77,7 @@ pub mod program_authority_escrow {
             &[&[
                 current_authority.key().as_ref(),
                 new_authority.key().as_ref(),
-                &[*ctx.bumps.get("escrow_authority").unwrap()],
+                &[ctx.bumps.escrow_authority],
             ]],
         )?;
         Ok(())
